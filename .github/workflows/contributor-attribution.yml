@@ -31,7 +31,7 @@ jobs:
           function isAI(identity) {
             const email = (identity?.email ?? '').trim();
             const account = /^(?:\d+\+)?([^@]+)@users\.noreply\.github\.com$/i.exec(email)?.[1];
-            return aiNames.test((identity?.name ?? '').trim().replace(/[ \t]+/g, ' ')) || /\(aider\b[^)]*\)[ \t]*$/i.test(identity?.name ?? '') ||
+            return aiNames.test((identity?.name ?? '').trim().replace(/[ \t]+/g, ' ').replace(/ \([^()\r\n]*\)$/, '')) || /\(aider\b[^)]*\)[ \t]*$/i.test(identity?.name ?? '') ||
               /^(?:noreply@(?:anthropic|openai)\.com|cursoragent@cursor\.com|aider@localhost)$/i.test(email) ||
               aiAccounts.test(identity?.login ?? '') || (account !== undefined && aiAccounts.test(account));
           }
@@ -81,7 +81,7 @@ jobs:
             for (const entry of [commit(), commit('Document Claude and ChatGPT'), commit('Fix art', { name: 'Claude Monet', email: 'artist@example.com' }), commit('Update dependencies', { name: 'dependabot[bot]', email: '49699333+dependabot[bot]@users.noreply.github.com' })]) {
               assert.deepEqual(attributionViolations([entry]), []);
             }
-            for (const name of ['Claude', 'Claude  Code', 'Claude\tSonnet 4.5', 'ChatGPT', 'OpenAI Codex', 'Cursor', 'Cursor Agent', 'Aider', 'Matthew Dean (aider)']) {
+            for (const name of ['Claude', 'Claude  Code', 'Claude\tSonnet 4.5', 'ChatGPT', 'OpenAI Codex', 'Cursor', 'Cursor Agent', 'Aider', 'Matthew Dean (aider)', 'GitHub Copilot (GPT-5)', 'Claude Opus 4.1 (1M context)']) {
               assert.equal(attributionViolations([commit('Fix', { name, email: 'agent@example.com' })]).length, 1);
               assert.equal(attributionViolations([commit(`Fix\n\nCo-authored-by: ${name} <agent@example.com>`)]).length, 1);
             }
