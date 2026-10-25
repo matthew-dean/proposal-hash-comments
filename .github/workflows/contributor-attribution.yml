@@ -25,14 +25,14 @@ jobs:
           ATTRIBUTION_BASELINE: "d6cab170d8b027a6266c5d2371fecf359aa424f0"
         run: |
           node --input-type=module <<'ATTRIBUTION_CHECK'
-          const aiNames = /^(?:Claude(?: (?:Code|Opus|Sonnet|Haiku)(?: [0-9.]+)?)?|ChatGPT|OpenAI Codex|Codex|GitHub Copilot|Copilot|Gemini|Cursor|Aider|AI Assistant)$/i;
+          const aiNames = /^(?:Claude(?: (?:Code|Opus|Sonnet|Haiku)(?: [0-9.]+)?)?|ChatGPT|OpenAI Codex|Codex|GitHub Copilot|Copilot|Gemini|Cursor(?: Agent)?|Aider|AI Assistant)$/i;
           const aiAccounts = /^(?:claude(?:\[bot\])?|chatgpt|codex|chatgpt-codex-connector\[bot\]|copilot(?:-swe-agent)?(?:\[bot\])?|gemini(?:-code-assist)?(?:\[bot\])?|cursor(?:-agent)?(?:\[bot\])?|aider(?:\[bot\])?)$/i;
           const generatedCredit = /^(?:Claude-Session:|[ \t]*(?:🤖[ \t]*)?Generated (?:with|by)[^\r\n]*(?:Claude|ChatGPT|Codex|Copilot|Gemini|Cursor|Aider))/im;
           function isAI(identity) {
             const email = (identity?.email ?? '').trim();
             const account = /^(?:\d+\+)?([^@]+)@users\.noreply\.github\.com$/i.exec(email)?.[1];
-            return aiNames.test((identity?.name ?? '').trim().replace(/[ \t]+/g, ' ')) ||
-              /^noreply@(?:anthropic|openai)\.com$/i.test(email) ||
+            return aiNames.test((identity?.name ?? '').trim().replace(/[ \t]+/g, ' ')) || /\(aider\b[^)]*\)[ \t]*$/i.test(identity?.name ?? '') ||
+              /^(?:noreply@(?:anthropic|openai)\.com|cursoragent@cursor\.com|aider@localhost)$/i.test(email) ||
               aiAccounts.test(identity?.login ?? '') || (account !== undefined && aiAccounts.test(account));
           }
           export function attributionViolations(commits) {
@@ -81,12 +81,13 @@ jobs:
             for (const entry of [commit(), commit('Document Claude and ChatGPT'), commit('Fix art', { name: 'Claude Monet', email: 'artist@example.com' }), commit('Update dependencies', { name: 'dependabot[bot]', email: '49699333+dependabot[bot]@users.noreply.github.com' })]) {
               assert.deepEqual(attributionViolations([entry]), []);
             }
-            for (const name of ['Claude', 'Claude  Code', 'Claude\tSonnet 4.5', 'ChatGPT', 'OpenAI Codex', 'Cursor', 'Aider']) {
+            for (const name of ['Claude', 'Claude  Code', 'Claude\tSonnet 4.5', 'ChatGPT', 'OpenAI Codex', 'Cursor', 'Cursor Agent', 'Aider', 'Matthew Dean (aider)']) {
               assert.equal(attributionViolations([commit('Fix', { name, email: 'agent@example.com' })]).length, 1);
               assert.equal(attributionViolations([commit(`Fix\n\nCo-authored-by: ${name} <agent@example.com>`)]).length, 1);
             }
             assert.equal(attributionViolations([commit('Co-authored-by: chatgpt-codex-connector[bot] <199175422+chatgpt-codex-connector[bot]@users.noreply.github.com>')]).length, 1);
             assert.equal(attributionViolations([commit('Fix\n\nCo-authored-by: Assistant <123+copilot-swe-agent[bot]@users.noreply.github.com>')]).length, 1);
+            assert.equal(attributionViolations([commit('Fix', { name: 'Build Bot', email: 'cursoragent@cursor.com' })]).length, 1);
             const records = Array.from({ length: 101 }, (_, i) => ({ ...commit(), sha: i.toString(16).padStart(40, '0') }));
             const args = { repository: 'owner/repo', baseline: 'b'.repeat(40), head: 'c'.repeat(40), token: 'test' };
             let calls = 0;
